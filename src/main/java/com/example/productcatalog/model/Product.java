@@ -1,10 +1,13 @@
 package com.example.productcatalog.model;
 
 import jakarta.persistence.*;
+import org.springframework.data.redis.core.RedisHash;
+import org.springframework.data.redis.core.index.Indexed;
 import java.math.BigDecimal;
 
+@RedisHash("product")
 @Entity
-@Table(name = "products")
+@Table(name = "products", schema = "public")
 public class Product {
 
     @Id
@@ -12,6 +15,7 @@ public class Product {
     private Long id;
 
     @Column(nullable = false)
+    @Indexed
     private String name;
 
     private String description;

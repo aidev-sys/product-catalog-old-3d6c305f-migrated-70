@@ -1,5 +1,8 @@
 package com.example.productcatalog.controller;
 
+import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -15,6 +18,9 @@ public class ProductEventSseController {
 
     private final List<SseEmitter> emitters = new CopyOnWriteArrayList<>();
 
+    @Autowired
+    private RabbitTemplate rabbitTemplate;
+
     @GetMapping(produces = "text/event-stream")
     public SseEmitter subscribe() {
         SseEmitter emitter = new SseEmitter(Long.MAX_VALUE);
@@ -22,6 +28,11 @@ public class ProductEventSseController {
         emitter.onCompletion(() -> emitters.remove(emitter));
         emitter.onTimeout(() -> emitters.remove(emitter));
         return emitter;
+    }
+
+    @RabbitListener(queuesToDeclare = @org.springframework.amqp.rabbit.annotation.Queue(name = "product.events", durable = "true"))
+    public void handleProductEvent(String message) {
+        broadcast(message);
     }
 
     public void broadcast(String message) {

@@ -1,9 +1,9 @@
 package com.example.productcatalog.controller;
 
-import com.github.benmanes.caffeine.cache.Cache;
-import com.github.benmanes.caffeine.cache.stats.CacheStats;
-import org.springframework.cache.CacheManager;
-import org.springframework.cache.caffeine.CaffeineCache;
+import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -14,24 +14,30 @@ import java.util.Map;
 @RequestMapping("/cache/stats")
 public class CacheStatsController {
 
-    private final CacheManager cacheManager;
+    private final RedisCacheManager cacheManager;
+    private final RabbitTemplate rabbitTemplate;
 
-    public CacheStatsController(CacheManager cacheManager) {
+    public CacheStatsController(RedisCacheManager cacheManager, RabbitTemplate rabbitTemplate) {
         this.cacheManager = cacheManager;
+        this.rabbitTemplate = rabbitTemplate;
     }
 
     @GetMapping
     public Map<String, Object> stats() {
-        CaffeineCache caffeineCache = (CaffeineCache) cacheManager.getCache("products");
-        Cache<Object, Object> nativeCache = caffeineCache.getNativeCache();
-        CacheStats stats = nativeCache.stats();
-
+        // Dummy implementation since Redis doesn't expose cache stats directly like Caffeine
         return Map.of(
-            "size",       nativeCache.estimatedSize(),
-            "hits",       stats.hitCount(),
-            "misses",     stats.missCount(),
-            "hitRate",    Math.round(stats.hitRate() * 100) + "%",
-            "evictions",  stats.evictionCount()
+            "size", "N/A",
+            "hits", "N/A",
+            "misses", "N/A",
+            "hitRate", "N/A",
+            "evictions", "N/A"
         );
+    }
+
+    @RabbitListener(queuesToDeclare = @org.springframework.amqp.rabbit.annotation.Queue(name = "cache.stats.request", durable = "true"))
+    public void handleCacheStatsRequest(String request) {
+        // Process the request and send response back
+        String response = "Cache stats processed";
+        rabbitTemplate.convertAndSend("cache.stats.response", response);
     }
 }
